@@ -6,6 +6,7 @@
     <title>湘鄂销售覆盖版图</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -299,6 +300,24 @@
 
         .lb-item.me .lb-count { color: #80c8ff; }
 
+        .lb-item.rank-up {
+            animation: rankUp 0.9s ease forwards;
+        }
+
+        @keyframes rankUp {
+            0%   { background: rgba(0,201,125,0.35); border-color: rgba(0,201,125,0.6); }
+            100% { background: transparent; border-color: transparent; }
+        }
+
+        .lb-item.me.rank-up {
+            animation: rankUpMe 0.9s ease forwards;
+        }
+
+        @keyframes rankUpMe {
+            0%   { background: rgba(0,201,125,0.35); border-color: rgba(0,201,125,0.6); }
+            100% { background: rgba(77,166,255,0.1); border-color: rgba(77,166,255,0.2); }
+        }
+
         .footer {
             padding: 7px;
             text-align: center;
@@ -329,6 +348,30 @@
         #toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
+        }
+
+        #combo-toast {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            background: linear-gradient(135deg, rgba(255,100,50,0.95), rgba(255,50,120,0.95));
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s, transform 0.25s;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        #combo-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
         }
     </style>
 </head>
@@ -385,6 +428,7 @@
 <div class="footer">点击县区 · 点亮覆盖 · 再次点击取消 &nbsp;|&nbsp; 滚轮缩放 · 拖拽移动</div>
 
 <div id="toast"></div>
+<div id="combo-toast"></div>
 
 <script>
 const SUPABASE_URL = 'https://qxtgqozhxhywfrcoztpc.supabase.co';
@@ -399,16 +443,18 @@ const USER_KEY    = 'sales_map_user';
 const HUNAN_CODE  = '430000';
 const HUBEI_CODE  = '420000';
 
-let currentUser    = localStorage.getItem(USER_KEY) || '';
-let coveredSet     = new Set();
-let adcodeToLitBy  = {};
+let currentUser     = localStorage.getItem(USER_KEY) || '';
+let coveredSet      = new Set();
+let adcodeToLitBy   = {};
 let leaderboardData = {};
-let allFeatures    = [];
-let nameToAdcode   = {};
-let adcodeToName   = {};
+let prevRankOrder   = [];
+let allFeatures     = [];
+let nameToAdcode    = {};
+let adcodeToName    = {};
 let chart;
 let toastTimer;
-let applyingRemote = false;
+let comboTimer      = {};
+let applyingRemote  = false;
 
 // ---------- 排行榜初始化 ----------
 function initLeaderboard() {
@@ -483,7 +529,10 @@ function setupRealtime() {
                 saveLocal();
                 updateStats();
                 renderLeaderboard();
-                if (name && litBy) showToast(`🔔 ${litBy} 点亮了：${name}`);
+                if (name && litBy) {
+                    showToast(`🔔 ${litBy} 点亮了：${name}`);
+                    trackCombo(litBy);
+                }
             }
         )
         .on('postgres_changes',
@@ -518,18 +567,52 @@ function setSyncStatus(connected) {
     document.getElementById('sync-label').textContent = connected ? '实时同步' : '离线模式';
 }
 
-// ---------- 渲染排行榜 ----------
+// ---------- 渲染排行榜（FLIP 动画 + 名次超越检测）----------
 function renderLeaderboard() {
+    const container = document.getElementById('leaderboard');
     const sorted = Object.entries(leaderboardData).sort((a, b) => b[1] - a[1]);
-    document.getElementById('leaderboard').innerHTML = sorted.map(([name, count], i) => {
-        const isMe = name === currentUser;
-        const rank = MEDALS[i] ?? `<span style="color:#3a4a6a;font-size:12px">${i + 1}</span>`;
-        return `<div class="lb-item${isMe ? ' me' : ''}">
+    const newRankOrder = sorted.map(([name]) => name);
+
+    // 检测名次提升
+    const rankUps = new Set();
+    newRankOrder.forEach((name, newIdx) => {
+        const oldIdx = prevRankOrder.indexOf(name);
+        if (oldIdx !== -1 && oldIdx > newIdx) rankUps.add(name);
+    });
+
+    // FLIP 第一步：记录旧位置
+    const oldPos = {};
+    container.querySelectorAll('.lb-item[data-name]').forEach(el => {
+        oldPos[el.dataset.name] = el.getBoundingClientRect().top;
+    });
+
+    // 更新 DOM
+    container.innerHTML = sorted.map(([name, count], i) => {
+        const isMe   = name === currentUser;
+        const rankUp = rankUps.has(name);
+        const rank   = MEDALS[i] ?? `<span style="color:#3a4a6a;font-size:12px">${i + 1}</span>`;
+        return `<div class="lb-item${isMe ? ' me' : ''}${rankUp ? ' rank-up' : ''}" data-name="${name}">
             <div class="lb-rank">${rank}</div>
             <div class="lb-name">${name}</div>
             <div class="lb-count">${count}</div>
         </div>`;
     }).join('');
+
+    // FLIP 第三四步：计算位移 → 播放动画
+    container.querySelectorAll('.lb-item[data-name]').forEach(el => {
+        const name = el.dataset.name;
+        if (oldPos[name] === undefined) return;
+        const delta = oldPos[name] - el.getBoundingClientRect().top;
+        if (Math.abs(delta) < 1) return;
+        el.style.transform = `translateY(${delta}px)`;
+        el.style.transition = 'none';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            el.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            el.style.transform  = '';
+        }));
+    });
+
+    prevRankOrder = newRankOrder;
 }
 
 // ---------- Toast ----------
@@ -539,6 +622,56 @@ function showToast(msg) {
     el.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+let comboToastTimer;
+function showComboToast(msg) {
+    const el = document.getElementById('combo-toast');
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(comboToastTimer);
+    comboToastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ---------- 连击追踪 ----------
+const comboTracker = {};
+const COMBO_MSGS = {
+    3: n => `🔥 ${n} 连击 ×3！`,
+    5: n => `⚡ ${n} 连击 ×5！势不可挡！`,
+    8: n => `🚀 ${n} 连击 ×8！开挂了？！`,
+};
+
+function trackCombo(name) {
+    if (!comboTracker[name]) comboTracker[name] = 0;
+    comboTracker[name]++;
+    clearTimeout(comboTimer[name]);
+    comboTimer[name] = setTimeout(() => { delete comboTracker[name]; }, 3000);
+
+    const c = comboTracker[name];
+    if (COMBO_MSGS[c]) showComboToast(COMBO_MSGS[c](name));
+    else if (c > 8 && (c - 8) % 3 === 0) showComboToast(`💥 ${name} 连击 ×${c}！！`);
+}
+
+// ---------- 里程碑烟花 ----------
+function celebrateMilestone(pct) {
+    if (pct === 100) {
+        const end = Date.now() + 3500;
+        (function burst() {
+            confetti({ particleCount: 6, angle: 60,  spread: 55, origin: { x: 0,   y: 0.6 }, colors: ['#4da6ff','#ffd700','#fff'] });
+            confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1,   y: 0.6 }, colors: ['#4da6ff','#ff6b6b','#80c8ff'] });
+            if (Date.now() < end) requestAnimationFrame(burst);
+        })();
+    } else if (pct >= 75) {
+        confetti({ particleCount: 160, spread: 100, origin: { y: 0.5 }, colors: ['#4da6ff','#ffd700','#ff6b6b','#80c8ff','#fff'] });
+    } else if (pct >= 50) {
+        confetti({ particleCount: 100, spread: 80,  origin: { y: 0.55 } });
+    } else if (pct >= 25) {
+        confetti({ particleCount: 60,  spread: 70,  origin: { y: 0.6 } });
+    } else {
+        confetti({ particleCount: 30,  spread: 60,  origin: { y: 0.65 } });
+    }
 }
 
 // ---------- 里程碑 ----------
@@ -556,6 +689,7 @@ function checkMilestone(pct) {
         if (pct >= m.pct && !triggeredMilestones.has(m.pct)) {
             triggeredMilestones.add(m.pct);
             showToast(m.msg);
+            celebrateMilestone(m.pct);
         }
     }
 }
