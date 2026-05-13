@@ -1067,6 +1067,17 @@ if (savedUser) {
 }
 
 window.addEventListener('resize', () => chart?.resize());
+
+// 参观者模式：遮罩层拦截点击，但滚轮缩放事件转发给 ECharts
+document.getElementById('map-overlay').addEventListener('wheel', (e) => {
+    document.getElementById('map').dispatchEvent(new WheelEvent('wheel', {
+        bubbles: true,
+        deltaX: e.deltaX, deltaY: e.deltaY, deltaZ: e.deltaZ, deltaMode: e.deltaMode,
+        clientX: e.clientX, clientY: e.clientY,
+        ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey,
+    }));
+}, { passive: true });
+
 loadMap();
 </script>
 </body>
