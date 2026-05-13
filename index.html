@@ -74,6 +74,31 @@
             color: #fff;
         }
 
+        .visitor-btn {
+            width: 320px;
+            color: #5a6a8a;
+            border-color: rgba(90,106,138,0.25);
+            background: rgba(90,106,138,0.05);
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .visitor-btn:hover {
+            background: rgba(90,106,138,0.15);
+            border-color: #5a6a8a;
+            color: #c8d8ff;
+        }
+
+        #map-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            display: none;
+            cursor: not-allowed;
+        }
+
+        #map-overlay.active { display: block; }
+
         header {
             padding: 14px 28px;
             display: flex;
@@ -381,6 +406,7 @@
     <div class="name-modal-title">选择你的身份</div>
     <div class="name-modal-sub">每台设备选择一次，点亮记录绑定到你的名字</div>
     <div class="name-grid" id="name-grid"></div>
+    <button class="name-btn visitor-btn" onclick="selectUser('__visitor__')">👁 以参观者身份进入</button>
 </div>
 
 <header>
@@ -417,6 +443,7 @@
             <div class="loading-text loading-dots">地图加载中</div>
         </div>
         <div id="map"></div>
+        <div id="map-overlay"></div>
     </div>
 
     <div class="leaderboard-panel">
@@ -443,7 +470,10 @@ const USER_KEY    = 'sales_map_user';
 const HUNAN_CODE  = '430000';
 const HUBEI_CODE  = '420000';
 
-let currentUser     = localStorage.getItem(USER_KEY) || '';
+const VISITOR_KEY   = '__visitor__';
+let savedUser       = localStorage.getItem(USER_KEY) || '';
+let isVisitor       = savedUser === VISITOR_KEY;
+let currentUser     = isVisitor ? '' : savedUser;
 let coveredSet      = new Set();
 let adcodeToLitBy   = {};
 let leaderboardData = {};
@@ -865,10 +895,12 @@ function initNameModal() {
 }
 
 function selectUser(name) {
-    currentUser = name;
+    isVisitor   = name === VISITOR_KEY;
+    currentUser = isVisitor ? '' : name;
     localStorage.setItem(USER_KEY, name);
     document.getElementById('name-modal').classList.add('hidden');
-    document.getElementById('user-badge').textContent = name;
+    document.getElementById('user-badge').textContent = isVisitor ? '👁 参观' : name;
+    document.getElementById('map-overlay').classList.toggle('active', isVisitor);
     renderLeaderboard();
 }
 
@@ -935,9 +967,10 @@ async function loadMap() {
 initLeaderboard();
 initNameModal();
 
-if (currentUser) {
+if (savedUser) {
     document.getElementById('name-modal').classList.add('hidden');
-    document.getElementById('user-badge').textContent = currentUser;
+    document.getElementById('user-badge').textContent = isVisitor ? '👁 参观' : currentUser;
+    if (isVisitor) document.getElementById('map-overlay').classList.add('active');
 }
 
 window.addEventListener('resize', () => chart?.resize());
