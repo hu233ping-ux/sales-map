@@ -1068,9 +1068,10 @@ if (savedUser) {
 
 window.addEventListener('resize', () => chart?.resize());
 
-// 参观者模式：遮罩层拦截点击，但滚轮缩放事件转发给 ECharts
+// 参观者模式：遮罩层拦截点击，但滚轮缩放事件转发给 ECharts（ZRender 监听在 canvas 上）
 document.getElementById('map-overlay').addEventListener('wheel', (e) => {
-    document.getElementById('map').dispatchEvent(new WheelEvent('wheel', {
+    const canvas = document.querySelector('#map canvas');
+    if (canvas) canvas.dispatchEvent(new WheelEvent('wheel', {
         bubbles: true,
         deltaX: e.deltaX, deltaY: e.deltaY, deltaZ: e.deltaZ, deltaMode: e.deltaMode,
         clientX: e.clientX, clientY: e.clientY,
