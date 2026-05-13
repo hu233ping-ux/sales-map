@@ -556,6 +556,7 @@ let chart;
 let toastTimer;
 let comboTimer      = {};
 let applyingRemote  = false;
+const pendingInserts = new Set();
 
 // ---------- 排行榜初始化 ----------
 function initLeaderboard() {
@@ -595,6 +596,10 @@ async function syncToSupabase(added, removed) {
     try {
         const ops = [];
         if (added.length) {
+            added.forEach(a => {
+                pendingInserts.add(a);
+                setTimeout(() => pendingInserts.delete(a), 10000);
+            });
             ops.push(db.from('covered_counties').upsert(
                 added.map(adcode => ({ adcode, lit_by: currentUser }))
             ));
@@ -616,7 +621,7 @@ function setupRealtime() {
             payload => {
                 const adcode = payload.new?.adcode;
                 const litBy  = payload.new?.lit_by;
-                if (!adcode || coveredSet.has(adcode)) return;
+                if (!adcode || coveredSet.has(adcode) || pendingInserts.has(adcode)) return;
 
                 adcodeToLitBy[adcode] = litBy;
                 if (litBy && leaderboardData[litBy] !== undefined) leaderboardData[litBy]++;
