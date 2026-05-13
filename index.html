@@ -523,9 +523,10 @@ async function loadMap() {
         const coveredPromise = loadCovered();
 
         loadingEl.textContent = '加载省市数据';
+        const geoOpts = { referrerPolicy: 'no-referrer' };
         const [hunan, hubei] = await Promise.all([
-            fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUNAN_CODE}_full.json`).then(r => r.json()),
-            fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUBEI_CODE}_full.json`).then(r => r.json())
+            fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUNAN_CODE}_full.json`, geoOpts).then(r => r.json()),
+            fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUBEI_CODE}_full.json`, geoOpts).then(r => r.json())
         ]);
 
         const cityFeatures = [...hunan.features, ...hubei.features]
@@ -536,7 +537,7 @@ async function loadMap() {
 
         const cityResults = await Promise.all(
             cityAdcodes.map(code =>
-                fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${code}_full.json`)
+                fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${code}_full.json`, geoOpts)
                     .then(r => r.json())
                     .catch(() => ({ features: [] }))
             )
