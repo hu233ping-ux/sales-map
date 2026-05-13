@@ -916,6 +916,11 @@ function initChart(geoJson, cityFeats) {
     renderLeaderboard();
 
     chart.on('selectchanged', params => {
+        if (applyingRemote) {
+            updateStats();
+            return;
+        }
+
         const selectedIndices = params.selected?.[0]?.dataIndex ?? [];
         const prevSet = new Set(coveredSet);
 
@@ -924,11 +929,6 @@ function initChart(geoJson, cityFeats) {
                 .map(i => allFeatures[i] ? String(allFeatures[i].properties.adcode) : null)
                 .filter(Boolean)
         );
-
-        if (applyingRemote) {
-            updateStats();
-            return;
-        }
 
         const added   = [...coveredSet].filter(a => !prevSet.has(a));
         const removed = [...prevSet].filter(a => !coveredSet.has(a));
@@ -961,6 +961,16 @@ function initChart(geoJson, cityFeats) {
         updateStats();
         renderLeaderboard();
     });
+
+    // 恢复已点亮县的视觉高亮（ECharts 不会从 data.selected 自动重绘）
+    const initPct = allFeatures.length ? Math.round(coveredSet.size / allFeatures.length * 100) : 0;
+    MILESTONES.forEach(m => { if (initPct >= m.pct) triggeredMilestones.add(m.pct); });
+    applyingRemote = true;
+    coveredSet.forEach(adcode => {
+        const name = adcodeToName[adcode];
+        if (name) chart.dispatchAction({ type: 'select', seriesIndex: 0, name });
+    });
+    applyingRemote = false;
 }
 
 // ---------- 姓名选择 ----------
