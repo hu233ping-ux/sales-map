@@ -19,6 +19,60 @@
             overflow: hidden;
         }
 
+        #name-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(6,12,26,0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            gap: 24px;
+        }
+
+        #name-modal.hidden { display: none; }
+
+        .name-modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4da6ff;
+            letter-spacing: 3px;
+        }
+
+        .name-modal-sub {
+            font-size: 13px;
+            color: #5a6a8a;
+            letter-spacing: 1px;
+            margin-top: -12px;
+        }
+
+        .name-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            width: 320px;
+        }
+
+        .name-btn {
+            padding: 12px 16px;
+            background: rgba(77,166,255,0.08);
+            border: 1px solid rgba(77,166,255,0.25);
+            border-radius: 8px;
+            color: #c8d8ff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+
+        .name-btn:hover {
+            background: rgba(77,166,255,0.2);
+            border-color: #4da6ff;
+            color: #fff;
+        }
+
         header {
             padding: 14px 28px;
             display: flex;
@@ -64,9 +118,7 @@
             letter-spacing: 1px;
         }
 
-        .progress-bar-wrap {
-            width: 160px;
-        }
+        .progress-bar-wrap { width: 160px; }
 
         .progress-bar-label {
             display: flex;
@@ -114,6 +166,30 @@
             box-shadow: 0 0 6px rgba(0,201,125,0.7);
         }
 
+        .user-badge {
+            font-size: 12px;
+            color: #4da6ff;
+            background: rgba(77,166,255,0.1);
+            border: 1px solid rgba(77,166,255,0.25);
+            border-radius: 12px;
+            padding: 3px 12px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .user-badge:hover {
+            background: rgba(77,166,255,0.2);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+            overflow: hidden;
+        }
+
         #map-container {
             flex: 1;
             position: relative;
@@ -156,6 +232,73 @@
             100% { content: '...'; }
         }
 
+        .leaderboard-panel {
+            width: 210px;
+            background: rgba(255,255,255,0.015);
+            border-left: 1px solid rgba(77,166,255,0.12);
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .lb-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #4da6ff;
+            letter-spacing: 2px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        .lb-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 6px;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            transition: background 0.2s;
+        }
+
+        .lb-item.me {
+            background: rgba(77,166,255,0.1);
+            border: 1px solid rgba(77,166,255,0.2);
+        }
+
+        .lb-rank {
+            font-size: 15px;
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .lb-name {
+            font-size: 12px;
+            color: #c8d8ff;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .lb-item.me .lb-name {
+            color: #4da6ff;
+            font-weight: bold;
+        }
+
+        .lb-count {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4da6ff;
+            flex-shrink: 0;
+            min-width: 24px;
+            text-align: right;
+        }
+
+        .lb-item.me .lb-count { color: #80c8ff; }
+
         .footer {
             padding: 7px;
             text-align: center;
@@ -191,6 +334,12 @@
 </head>
 <body>
 
+<div id="name-modal">
+    <div class="name-modal-title">选择你的身份</div>
+    <div class="name-modal-sub">每台设备选择一次，点亮记录绑定到你的名字</div>
+    <div class="name-grid" id="name-grid"></div>
+</div>
+
 <header>
     <div class="title">湘鄂销售覆盖版图</div>
     <div class="stats">
@@ -215,14 +364,22 @@
             <div class="sync-dot" id="sync-dot"></div>
             <span id="sync-label">连接中</span>
         </div>
+        <div class="user-badge" id="user-badge" onclick="switchUser()">—</div>
     </div>
 </header>
 
-<div id="map-container">
-    <div id="loading">
-        <div class="loading-text loading-dots">地图加载中</div>
+<div class="main-content">
+    <div id="map-container">
+        <div id="loading">
+            <div class="loading-text loading-dots">地图加载中</div>
+        </div>
+        <div id="map"></div>
     </div>
-    <div id="map"></div>
+
+    <div class="leaderboard-panel">
+        <div class="lb-title">⚔ 战队排行</div>
+        <div id="leaderboard"></div>
+    </div>
 </div>
 
 <div class="footer">点击县区 · 点亮覆盖 · 再次点击取消 &nbsp;|&nbsp; 滚轮缩放 · 拖拽移动</div>
@@ -235,17 +392,29 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const TEAM        = ['Mico Mi', 'Gary Huang', 'Aimee Qu', 'Lucas Luo', 'Will Ouyang', 'John Fan', 'Jason Liu', 'TBD'];
+const MEDALS      = ['🥇', '🥈', '🥉'];
 const STORAGE_KEY = 'sales_map_v1';
+const USER_KEY    = 'sales_map_user';
 const HUNAN_CODE  = '430000';
 const HUBEI_CODE  = '420000';
 
+let currentUser    = localStorage.getItem(USER_KEY) || '';
 let coveredSet     = new Set();
+let adcodeToLitBy  = {};
+let leaderboardData = {};
 let allFeatures    = [];
 let nameToAdcode   = {};
 let adcodeToName   = {};
 let chart;
 let toastTimer;
 let applyingRemote = false;
+
+// ---------- 排行榜初始化 ----------
+function initLeaderboard() {
+    leaderboardData = {};
+    TEAM.forEach(n => { leaderboardData[n] = 0; });
+}
 
 // ---------- localStorage 备份 ----------
 function saveLocal() {
@@ -255,11 +424,21 @@ function saveLocal() {
 // ---------- Supabase: 初始加载 ----------
 async function loadCovered() {
     try {
-        const { data, error } = await db.from('covered_counties').select('adcode');
+        const { data, error } = await db.from('covered_counties').select('adcode, lit_by');
         if (error) throw error;
-        return new Set(data.map(r => r.adcode));
+        const set = new Set();
+        initLeaderboard();
+        data.forEach(r => {
+            set.add(r.adcode);
+            adcodeToLitBy[r.adcode] = r.lit_by;
+            if (r.lit_by && leaderboardData[r.lit_by] !== undefined) {
+                leaderboardData[r.lit_by]++;
+            }
+        });
+        return set;
     } catch (e) {
         console.warn('Supabase加载失败，使用本地缓存:', e);
+        initLeaderboard();
         return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
     }
 }
@@ -269,7 +448,9 @@ async function syncToSupabase(added, removed) {
     try {
         const ops = [];
         if (added.length) {
-            ops.push(db.from('covered_counties').upsert(added.map(adcode => ({ adcode }))));
+            ops.push(db.from('covered_counties').upsert(
+                added.map(adcode => ({ adcode, lit_by: currentUser }))
+            ));
         }
         if (removed.length) {
             ops.push(db.from('covered_counties').delete().in('adcode', removed));
@@ -287,52 +468,80 @@ function setupRealtime() {
             { event: 'INSERT', schema: 'public', table: 'covered_counties' },
             payload => {
                 const adcode = payload.new?.adcode;
+                const litBy  = payload.new?.lit_by;
                 if (!adcode || coveredSet.has(adcode)) return;
+
+                adcodeToLitBy[adcode] = litBy;
+                if (litBy && leaderboardData[litBy] !== undefined) leaderboardData[litBy]++;
+
                 const name = adcodeToName[adcode];
                 applyingRemote = true;
                 coveredSet.add(adcode);
                 if (name) chart?.dispatchAction({ type: 'select', seriesIndex: 0, name });
                 applyingRemote = false;
+
                 saveLocal();
                 updateStats();
-                if (name) showToast(`🔔 队友点亮了：${name}`);
+                renderLeaderboard();
+                if (name && litBy) showToast(`🔔 ${litBy} 点亮了：${name}`);
             }
         )
         .on('postgres_changes',
             { event: 'DELETE', schema: 'public', table: 'covered_counties' },
             payload => {
                 const adcode = payload.old?.adcode;
+                const litBy  = payload.old?.lit_by;
                 if (!adcode || !coveredSet.has(adcode)) return;
+
+                if (litBy && leaderboardData[litBy] !== undefined) {
+                    leaderboardData[litBy] = Math.max(0, leaderboardData[litBy] - 1);
+                }
+                delete adcodeToLitBy[adcode];
+
                 const name = adcodeToName[adcode];
                 applyingRemote = true;
                 coveredSet.delete(adcode);
                 if (name) chart?.dispatchAction({ type: 'unselect', seriesIndex: 0, name });
                 applyingRemote = false;
+
                 saveLocal();
                 updateStats();
+                renderLeaderboard();
             }
         )
-        .subscribe(status => {
-            setSyncStatus(status === 'SUBSCRIBED');
-        });
+        .subscribe(status => setSyncStatus(status === 'SUBSCRIBED'));
 }
 
-// ---------- 同步状态指示 ----------
+// ---------- 同步状态 ----------
 function setSyncStatus(connected) {
     document.getElementById('sync-dot').classList.toggle('connected', connected);
     document.getElementById('sync-label').textContent = connected ? '实时同步' : '离线模式';
 }
 
-// ---------- Toast 提示 ----------
+// ---------- 渲染排行榜 ----------
+function renderLeaderboard() {
+    const sorted = Object.entries(leaderboardData).sort((a, b) => b[1] - a[1]);
+    document.getElementById('leaderboard').innerHTML = sorted.map(([name, count], i) => {
+        const isMe = name === currentUser;
+        const rank = MEDALS[i] ?? `<span style="color:#3a4a6a;font-size:12px">${i + 1}</span>`;
+        return `<div class="lb-item${isMe ? ' me' : ''}">
+            <div class="lb-rank">${rank}</div>
+            <div class="lb-name">${name}</div>
+            <div class="lb-count">${count}</div>
+        </div>`;
+    }).join('');
+}
+
+// ---------- Toast ----------
 function showToast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// ---------- 里程碑庆祝 ----------
+// ---------- 里程碑 ----------
 const MILESTONES = [
     { pct: 10,  msg: '🎉 已覆盖 10%，好的开始！' },
     { pct: 25,  msg: '🔥 四分之一版图点亮！' },
@@ -351,7 +560,7 @@ function checkMilestone(pct) {
     }
 }
 
-// ---------- 数字跳动动画 ----------
+// ---------- 数字跳动 ----------
 function bumpNumber(id) {
     const el = document.getElementById(id);
     el.classList.add('bump');
@@ -363,12 +572,10 @@ function updateStats() {
     const lit   = coveredSet.size;
     const total = allFeatures.length;
     const pct   = total ? Math.round(lit / total * 100) : 0;
-
     document.getElementById('lit-count').textContent   = lit;
     document.getElementById('total-count').textContent = total || '—';
     document.getElementById('percent').textContent     = pct + '%';
     document.getElementById('progress-fill').style.width = pct + '%';
-
     checkMilestone(pct);
 }
 
@@ -384,7 +591,6 @@ function buildMapData() {
 // ---------- 初始化地图 ----------
 function initChart(geoJson, cityFeats) {
     document.getElementById('loading').style.display = 'none';
-
     echarts.registerMap('HunanHubei', geoJson);
 
     allFeatures = geoJson.features;
@@ -397,28 +603,20 @@ function initChart(geoJson, cityFeats) {
     const cityBorderLines = [];
     cityFeats.forEach(f => {
         const polys = f.geometry.type === 'MultiPolygon'
-            ? f.geometry.coordinates
-            : [f.geometry.coordinates];
-        polys.forEach(poly => {
-            poly.forEach(ring => {
-                cityBorderLines.push({ coords: [...ring, ring[0]] });
-            });
-        });
+            ? f.geometry.coordinates : [f.geometry.coordinates];
+        polys.forEach(poly => poly.forEach(ring => {
+            cityBorderLines.push({ coords: [...ring, ring[0]] });
+        }));
     });
 
     chart = echarts.init(document.getElementById('map'));
-
     chart.setOption({
         backgroundColor: '#060c1a',
         geo: [{
             map: 'HunanHubei',
             roam: true,
             scaleLimit: { min: 1, max: 20 },
-            itemStyle: {
-                areaColor: '#0d1b36',
-                borderColor: '#1e3060',
-                borderWidth: 0.6
-            },
+            itemStyle: { areaColor: '#0d1b36', borderColor: '#1e3060', borderWidth: 0.6 },
             emphasis: { disabled: true },
             label: { show: false }
         }],
@@ -432,10 +630,11 @@ function initChart(geoJson, cityFeats) {
                 const adcode = nameToAdcode[params.name];
                 if (!adcode) return '';
                 const covered = coveredSet.has(adcode);
+                const litBy   = adcodeToLitBy[adcode];
                 return `<b style="color:#fff">${params.name}</b><br/>
-                        ${covered
-                            ? '<span style="color:#4da6ff">✅ 已覆盖</span>'
-                            : '<span style="color:#5a6a8a">未覆盖，点击标记</span>'}`;
+                    ${covered
+                        ? `<span style="color:#4da6ff">✅ ${litBy ? litBy + ' 覆盖' : '已覆盖'}</span>`
+                        : '<span style="color:#5a6a8a">未覆盖，点击标记</span>'}`;
             }
         },
         series: [
@@ -468,16 +667,13 @@ function initChart(geoJson, cityFeats) {
                 silent: true,
                 z: 10,
                 data: cityBorderLines,
-                lineStyle: {
-                    color: 'rgba(120,185,255,0.85)',
-                    width: 2.5,
-                    opacity: 1
-                }
+                lineStyle: { color: 'rgba(120,185,255,0.85)', width: 2.5, opacity: 1 }
             }
         ]
     });
 
     updateStats();
+    renderLeaderboard();
 
     chart.on('selectchanged', params => {
         const selectedIndices = params.selected?.[0]?.dataIndex ?? [];
@@ -494,6 +690,21 @@ function initChart(geoJson, cityFeats) {
             return;
         }
 
+        const added   = [...coveredSet].filter(a => !prevSet.has(a));
+        const removed = [...prevSet].filter(a => !coveredSet.has(a));
+
+        added.forEach(adcode => {
+            adcodeToLitBy[adcode] = currentUser;
+            if (leaderboardData[currentUser] !== undefined) leaderboardData[currentUser]++;
+        });
+        removed.forEach(adcode => {
+            const prev = adcodeToLitBy[adcode];
+            if (prev && leaderboardData[prev] !== undefined) {
+                leaderboardData[prev] = Math.max(0, leaderboardData[prev] - 1);
+            }
+            delete adcodeToLitBy[adcode];
+        });
+
         const rawName = params.fromActionPayload?.name;
         const name = Array.isArray(rawName) ? rawName[0] : rawName;
         if (name) {
@@ -505,25 +716,40 @@ function initChart(geoJson, cityFeats) {
             }
         }
 
-        const added   = [...coveredSet].filter(a => !prevSet.has(a));
-        const removed = [...prevSet].filter(a => !coveredSet.has(a));
-
         saveLocal();
         syncToSupabase(added, removed);
         updateStats();
+        renderLeaderboard();
     });
+}
+
+// ---------- 姓名选择 ----------
+function initNameModal() {
+    document.getElementById('name-grid').innerHTML = TEAM.map(name =>
+        `<button class="name-btn" onclick="selectUser('${name}')">${name}</button>`
+    ).join('');
+}
+
+function selectUser(name) {
+    currentUser = name;
+    localStorage.setItem(USER_KEY, name);
+    document.getElementById('name-modal').classList.add('hidden');
+    document.getElementById('user-badge').textContent = name;
+    renderLeaderboard();
+}
+
+function switchUser() {
+    document.getElementById('name-modal').classList.remove('hidden');
 }
 
 // ---------- 加载地图数据 ----------
 async function loadMap() {
     const loadingEl = document.querySelector('.loading-text');
-
     try {
-        // 并行启动：Supabase数据 + 地理数据
         const coveredPromise = loadCovered();
+        const geoOpts = { referrerPolicy: 'no-referrer' };
 
         loadingEl.textContent = '加载省市数据';
-        const geoOpts = { referrerPolicy: 'no-referrer' };
         const [hunan, hubei] = await Promise.all([
             fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUNAN_CODE}_full.json`, geoOpts).then(r => r.json()),
             fetch(`https://geo.datav.aliyun.com/areas_v3/bound/${HUBEI_CODE}_full.json`, geoOpts).then(r => r.json())
@@ -553,20 +779,13 @@ async function loadMap() {
             const sub = cityResults[i].features.filter(
                 f => !['province', 'city'].includes(f.properties.level)
             );
-            if (sub.length > 0) {
-                features.push(...sub);
-            } else {
-                if (cityFeatureByAdcode[adcode]) {
-                    features.push(cityFeatureByAdcode[adcode]);
-                }
-            }
+            if (sub.length > 0) features.push(...sub);
+            else if (cityFeatureByAdcode[adcode]) features.push(cityFeatureByAdcode[adcode]);
         });
 
         if (features.length === 0) throw new Error('未获取到地图数据');
 
-        // 等待Supabase数据（通常地理数据更慢，此时已返回）
         coveredSet = await coveredPromise;
-
         initChart({ type: 'FeatureCollection', features }, cityFeatures);
         setupRealtime();
 
@@ -576,6 +795,15 @@ async function loadMap() {
         loadingEl.style.color = '#ff6060';
         console.error('地图加载失败:', e);
     }
+}
+
+// ---------- 启动 ----------
+initLeaderboard();
+initNameModal();
+
+if (currentUser) {
+    document.getElementById('name-modal').classList.add('hidden');
+    document.getElementById('user-badge').textContent = currentUser;
 }
 
 window.addEventListener('resize', () => chart?.resize());
